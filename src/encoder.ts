@@ -4,7 +4,7 @@ export enum ErrorCorrectionLevel {
   L = 'L',
   M = 'M',
   Q = 'Q',
-  H = 'H'
+  H = 'H',
 }
 
 /**
@@ -54,17 +54,28 @@ export class QREncoder {
     return bitStream;
   }
 
-  static encodeToBinaryOld(text: string, _level: ErrorCorrectionLevel): Uint8Array {
+  /**
+   * Convert input text to binary (Byte Mode) using Uint8Array.
+   * @param text - Input string to encode.
+   * @param level - Error correction level (L, M, Q, H).
+   * @returns Uint8Array bitstream.
+   */
+  static encodeToBinaryNew(text: string, level: ErrorCorrectionLevel): Uint8Array {
     const byteData = new Uint8Array(text.length + 2);
     // Mode indicator
     byteData[0] = QREncoder.MODE_INDICATOR;
     // Character count indicator
     byteData[1] = text.length;
 
+    // Convert characters to bytes
     for (let i = 0; i < text.length; i++) {
       byteData[i + 2] = text.charCodeAt(i);
     }
 
-    return byteData;
+    // Compute error correction
+    const ecLevel = QREncoder.ERROR_CORRECTION_LEVELS[level];
+    const ecCodewords = ReedSolomon.generateECCodewords(Array.from(byteData), ecLevel);
+
+    return new Uint8Array([...byteData, ...ecCodewords]);
   }
 }

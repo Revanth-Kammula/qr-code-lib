@@ -22,15 +22,26 @@ export class QRMatrix {
       [QRMatrix.SIZE - 7, 0], // Bottom-left
     ];
 
-    positions.forEach(([row, col]) => {
-      for (let y = 0; y < 7; y++) {
-        for (let x = 0; x < 7; x++) {
-          const isBorder = x === 0 || y === 0 || x === 6 || y === 6;
-          const isInner = x >= 2 && x <= 4 && y >= 2 && y <= 4;
-          this.matrix[row + y][col + x] = isBorder || isInner ? 1 : 0;
-        }
+      positions.forEach(([row, col]) => this.addFinderPattern(row, col));
+    }
+
+    /**
+     * Add a single finder pattern at the specified position
+     */
+  private addFinderPattern(row: number, col: number) {
+    for (let y = 0; y < 7; y++) {
+      for (let x = 0; x < 7; x++) {
+        this.matrix[row + y][col + x] = this.isBorder(x, y) || this.isInner(x, y) ? 1 : 0;
       }
-    });
+    }
+  }
+
+  private isBorder(x: number, y: number): boolean {
+    return x === 0 || y === 0 || x === 6 || y === 6;
+  }
+
+  private isInner(x: number, y: number): boolean {
+    return x >= 2 && x <= 4 && y >= 2 && y <= 4;
   }
 
   /**
@@ -50,17 +61,15 @@ export class QRMatrix {
   private addData(bitStream: string) {
     let bitIndex = 0;
     for (let col = QRMatrix.SIZE - 1; col > 0; col -= 2) {
-      // Skip timing column
-      if (col === 6) {
-        col--;
-      }
       for (let row = 0; row < QRMatrix.SIZE; row++) {
-        if (this.matrix[row][col] === 0 && bitIndex < bitStream.length) {
-          this.matrix[row][col] = bitStream[bitIndex++] === '1' ? 1 : 0;
-        }
+      if (col !== 6 && this.matrix[row][col] === 0 && bitIndex < bitStream.length) {
+        const bit = bitStream[bitIndex];
+        bitIndex++;
+        this.matrix[row][col] = bit === '1' ? 1 : 0;
       }
     }
   }
+}
 
   /**
    * Generate the final QR matrix

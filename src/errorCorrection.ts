@@ -1,3 +1,5 @@
+import { ErrorCorrectionLevel } from './encoder';
+
 export class ReedSolomon {
   private static GF256_EXP = new Uint8Array(512);
   private static GF256_LOG = new Uint8Array(256);
@@ -74,5 +76,17 @@ export class ReedSolomon {
     }
 
     return ecc;
+  }
+
+  /**
+   * Generates error correction bits (simplified example)
+   * @param data - Input data as binary string
+   * @param level - Error correction level (L, M, Q, H)
+   * @returns Error correction codewords
+   */
+  static generateErrorCorrection(data: string, _level: ErrorCorrectionLevel): string {
+    // Placeholder: Just returning 16 redundant bits (should use proper Reed-Solomon encoding)
+    const errorBits = '1010101010101010';
+    return data + errorBits;
   }
 }

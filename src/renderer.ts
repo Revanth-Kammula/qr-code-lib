@@ -1,3 +1,22 @@
+type Shape = 'square' | 'circle' | 'rounded';
+
+export interface QRCodeOptions {
+  // Color of the QR dots
+  foregroundColor?: string;
+  backgroundColor?: string;
+  // Finder pattern style (eye shape)
+  dotShape?: Shape;
+  // Finder pattern style (eye shape)
+  eyeShape?: Shape;
+  // Optional gradient for the QR code
+  gradient?: { start: string; end: string; type: 'linear' | 'radial' };
+  // Optional logo image URL
+  logoSrc?: string;
+  // Logo size relative to QR (default: 0.2)
+  logoSizeRatio?: number;
+}
+
+const CANVAS_ERROR_CONTEXT = 'Failed to get 2D context';
 export class QRRenderer {
   /**
    * Render QR code to Canvas with custom styling and optional logo.
@@ -9,20 +28,24 @@ export class QRRenderer {
   static async renderToCanvasWithStyle(
     matrix: number[][],
     size: number,
-    options: {
-      foregroundColor?: string; // Color of the QR dots
-      backgroundColor?: string; // Background color
-      dotShape?: "square" | "circle" | "rounded"; // Dot shape style
-      eyeShape?: "square" | "circle" | "rounded"; // Finder pattern style
-      gradient?: { start: string; end: string; type: "linear" | "radial" }; // Optional gradient
-      logoSrc?: string; // Optional logo image URL
-      logoSizeRatio?: number; // Logo size relative to QR (default: 0.2)
-    } = {}
+    options: QRCodeOptions = {},
   ): Promise<HTMLCanvasElement> {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d")!;
+    const canvas = document.createElement('canvas');
+    // Disable alpha for better performance
+    const ctx = canvas.getContext('2d', { alpha: false });
+    if (!ctx) {
+      throw new Error(CANVAS_ERROR_CONTEXT);
+    }
     const cellSize = size / matrix.length;
-    const { foregroundColor = "black", backgroundColor = "white", dotShape = "square", eyeShape = "square", logoSrc, logoSizeRatio = 0.2, gradient } = options;
+    const {
+      foregroundColor = 'black',
+      backgroundColor = 'white',
+      dotShape = 'square',
+      eyeShape = 'square',
+      logoSrc,
+      logoSizeRatio = 0.2,
+      gradient,
+    } = options;
 
     canvas.width = size;
     canvas.height = size;
@@ -33,25 +56,26 @@ export class QRRenderer {
 
     // Create gradient if enabled
     if (gradient) {
-      const grad = gradient.type === "linear"
-        ? ctx.createLinearGradient(0, 0, size, size)
-        : ctx.createRadialGradient(size / 2, size / 2, size / 4, size / 2, size / 2, size / 1.5);
+      const grad =
+        gradient.type === 'linear'
+          ? ctx.createLinearGradient(0, 0, size, size)
+          : ctx.createRadialGradient(size / 2, size / 2, size / 4, size / 2, size / 2, size / 1.5);
       grad.addColorStop(0, gradient.start);
       grad.addColorStop(1, gradient.end);
       ctx.fillStyle = grad;
     } else {
       ctx.fillStyle = foregroundColor;
     }
-
+    ctx.beginPath();
     // Draw QR code dots with selected shape
     matrix.forEach((row, y) => {
       row.forEach((cell, x) => {
         if (cell) {
           switch (dotShape) {
-            case "circle":
+            case 'circle':
               this.drawCircle(ctx, x * cellSize, y * cellSize, cellSize);
               break;
-            case "rounded":
+            case 'rounded':
               this.drawRoundedRect(ctx, x * cellSize, y * cellSize, cellSize, 4);
               break;
             default:
@@ -61,7 +85,7 @@ export class QRRenderer {
         }
       });
     });
-
+    ctx.fill();
     // Draw finder (eye) patterns with different styles
     this.drawEyePattern(ctx, matrix, cellSize, eyeShape);
 
@@ -70,14 +94,14 @@ export class QRRenderer {
 
     return new Promise((resolve, reject) => {
       const logo = new Image();
-      logo.crossOrigin = "anonymous";
+      logo.crossOrigin = 'anonymous';
       logo.src = logoSrc;
       logo.onload = () => {
         const logoSize = size * logoSizeRatio;
         const logoX = (size - logoSize) / 2;
         const logoY = (size - logoSize) / 2;
 
-        ctx.fillStyle = "white";
+        ctx.fillStyle = 'white';
         ctx.fillRect(logoX - 5, logoY - 5, logoSize + 10, logoSize + 10);
 
         ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
@@ -99,7 +123,13 @@ export class QRRenderer {
   /**
    * Draws a rounded rectangle for QR dots.
    */
-  private static drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, radius: number) {
+  private static drawRoundedRect(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    size: number,
+    radius: number,
+  ) {
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
     ctx.arcTo(x + size, y, x + size, y + size, radius);
@@ -112,7 +142,12 @@ export class QRRenderer {
   /**
    * Draws the eye (finder) patterns with different styles.
    */
-  private static drawEyePattern(ctx: CanvasRenderingContext2D, matrix: number[][], cellSize: number, style: "square" | "circle" | "rounded") {
+  private static drawEyePattern(
+    ctx: CanvasRenderingContext2D,
+    matrix: number[][],
+    cellSize: number,
+    style: Shape,
+  ) {
     const positions = [
       [0, 0],
       [0, matrix.length - 7],
@@ -121,10 +156,10 @@ export class QRRenderer {
 
     positions.forEach(([row, col]) => {
       switch (style) {
-        case "circle":
+        case 'circle':
           this.drawCircle(ctx, col * cellSize, row * cellSize, cellSize * 7);
           break;
-        case "rounded":
+        case 'rounded':
           this.drawRoundedRect(ctx, col * cellSize, row * cellSize, cellSize * 7, 8);
           break;
         default:
@@ -134,23 +169,92 @@ export class QRRenderer {
     });
   }
 
-  static renderToSVG(matrix: number[][], size: number): string {
-    return `<svg width='${size}' height='${size}'></svg>`;
+  /**
+   * Render QR code to Canvas
+   * @param matrix - QR Matrix (2D array)
+   * @param size - Canvas size in pixels
+   * @returns HTMLCanvasElement
+   */
+  static renderToCanvas(matrix: number[][], size: number): HTMLCanvasElement {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error(CANVAS_ERROR_CONTEXT);
+    }
+    const cellSize = size / matrix.length;
+
+    canvas.width = size;
+    canvas.height = size;
+    ctx.fillStyle = 'black';
+
+    matrix.forEach((row, y) => {
+      row.forEach((cell, x) => {
+        if (cell) ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+      });
+    });
+
+    return canvas;
   }
 
+  /**
+   * Render QR code to SVG
+   * @param matrix - QR Matrix (2D array)
+   * @param size - SVG size in pixels
+   * @returns SVG string
+   */
+  static renderToSVG(matrix: number[][], size: number): string {
+    let svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${matrix.length} ${matrix.length}">`;
+    matrix.forEach((row, y) => {
+      row.forEach((cell, x) => {
+        if (cell) svg += `<rect x="${x}" y="${y}" width="1" height="1" fill="black"/>`;
+      });
+    });
+    return svg + '</svg>';
+  }
+
+  /**
+   * Saves the QR code SVG as a file.
+   * @param svgString - SVG content
+   * @param fileName - Output file name
+   */
   static saveSVG(svgString: string, fileName: string) {
     const blob = new Blob([svgString], { type: 'image/svg+xml' });
+    this.saveImage(blob, fileName);
   }
 
+  /**
+   * Converts the QR code canvas to an image format (PNG, JPEG, Base64).
+   * @param canvas - The QR canvas
+   * @param format - Image format ("png", "jpeg", "base64")
+   * @param quality - Image quality (0 to 1, only for JPEG)
+   * @returns Blob or Base64 string
+   */
   static async exportCanvasAsImage(
     canvas: HTMLCanvasElement,
-    format: 'png' | 'jpeg'
-  ): Promise<Blob> {
-    return new Promise(resolve => {
-      canvas.toBlob(blob => resolve(blob!), `image/${format}`);
+    format: 'png' | 'jpeg' | 'base64',
+    quality = 1,
+  ): Promise<Blob | string> {
+    return new Promise((resolve, reject) => {
+      if (format === 'base64') {
+        resolve(canvas.toDataURL('image/png'));
+      } else {
+        canvas.toBlob(
+          blob => {
+            if (blob) resolve(blob);
+            else reject(new Error('Failed to generate image'));
+          },
+          `image/${format}`,
+          quality,
+        );
+      }
     });
   }
 
+  /**
+   * Saves the QR code image file.
+   * @param blob - Image Blob
+   * @param fileName - Name of the output file
+   */
   static saveImage(blob: Blob, fileName: string) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -177,7 +281,7 @@ export class QRRenderer {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-      throw new Error('Failed to get 2D context');
+      throw new Error(CANVAS_ERROR_CONTEXT);
     }
     const cellSize = size / matrix.length;
 

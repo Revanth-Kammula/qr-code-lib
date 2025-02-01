@@ -1,4 +1,4 @@
-import { QREncoder } from './encoder';
+import { ErrorCorrectionLevel, QREncoder } from './encoder';
 import { QRMatrix } from './matrix';
 import { QRRenderer } from './renderer';
 
@@ -8,13 +8,13 @@ import { QRRenderer } from './renderer';
 export class QRCode {
   private readonly matrix: number[][];
 
-  constructor(private readonly text: string, private readonly errorCorrection: 'L' | 'M' | 'Q' | 'H' = 'M') {
+  constructor(private readonly text: string, private readonly errorCorrection: ErrorCorrectionLevel = ErrorCorrectionLevel.M) {
     const encodedData = QREncoder.encodeToBinary(this.text, this.errorCorrection);
     this.matrix = new QRMatrix().generate(encodedData);
   }
 
   async toCanvas(size: number): Promise<HTMLCanvasElement> {
-    return QRRenderer.renderToCanvasWithStyle(this.matrix, size, {});
+    return QRRenderer.renderToCanvasWithStyle(this.matrix, size);
   }
 
   toSVG(size: number): string {

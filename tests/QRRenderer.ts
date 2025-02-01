@@ -1,19 +1,19 @@
 import { QRRenderer } from '../src/renderer';
 import { QRMatrix } from '../src/matrix';
-import { QREncoder } from '../src/encoder';
+import { ErrorCorrectionLevel, QREncoder } from '../src/encoder';
 
 describe('QRRenderer', () => {
   let qrMatrix: number[][];
 
   beforeAll(() => {
-    const encodedData = QREncoder.encodeToBinary('RenderTest', 'M');
+    const encodedData = QREncoder.encodeToBinary('RenderTest', ErrorCorrectionLevel.M);
     qrMatrix = new QRMatrix().generate(encodedData);
   });
 
   test('should render a canvas element', async () => {
     const canvas = await QRRenderer.renderToCanvasWithStyle(qrMatrix, 300, {
       foregroundColor: '#000',
-      backgroundColor: '#fff',
+      backgroundColor: '#fff'
     });
 
     expect(canvas).toBeInstanceOf(HTMLCanvasElement);

@@ -10,6 +10,6 @@ describe('ReedSolomon', () => {
   test('should produce non-zero error correction values', () => {
     const data = [5, 10, 20, 30, 40];
     const ecCodewords = ReedSolomon.generateECCodewords(data, 5);
-    expect(ecCodewords.some((code) => code !== 0)).toBeTruthy();
+    expect(ecCodewords.some(code => code !== 0)).toBeTruthy();
   });
 });

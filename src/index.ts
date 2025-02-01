@@ -6,7 +6,7 @@ import { QRCodeOptions, QRRenderer } from './renderer';
  * QRCode: Main class for generating QR codes.
  */
 export class QRCode {
-  private readonly matrix: number[][];
+  private matrix: number[][];
 
   constructor(
     private readonly text: string,
@@ -14,6 +14,8 @@ export class QRCode {
   ) {
     const encodedData = QREncoder.encodeToBinary(this.text, this.errorCorrection);
     this.matrix = new QRMatrix().generate(encodedData);
+    // potential async generation
+    // this.generateAsync();
   }
 
   /**
@@ -65,5 +67,23 @@ export class QRCode {
       const blob = await this.exportAsImage(format, size);
       QRRenderer.saveImage(blob as Blob, fileName);
     }
+  }
+
+  /**
+   * Generate QR code asynchronously using a Web Worker.
+   */
+  async generateAsync(): Promise<number[][]> {
+    return new Promise((resolve, reject) => {
+      const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+      worker.postMessage({ text: this.text, level: this.errorCorrection });
+
+      worker.onmessage = event => {
+        this.matrix = event.data;
+        resolve(this.matrix);
+        worker.terminate();
+      };
+
+      worker.onerror = error => reject(new Error(error.message));
+    });
   }
 }

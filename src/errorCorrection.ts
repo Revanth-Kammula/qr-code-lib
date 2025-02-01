@@ -69,8 +69,10 @@ export class ReedSolomon {
       ecc[numECWords - 1] = 0;
 
       if (factor !== 0) {
-        for (let j = 0; j < numECWords; j++) {
-          ecc[j] ^= this.gfMultiply(generator[j], factor);
+        let j = 0;
+        for (const gen of generator) {
+          ecc[j] ^= this.gfMultiply(gen, factor);
+          j++;
         }
       }
     }
